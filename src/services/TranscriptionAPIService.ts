@@ -6,14 +6,14 @@ const API_BASE_URL =
   process.env.TRANSCRIPTION_API_BASE_URL ||
   "https://api.softcatala.org/transcribe-service/v1";
 
-export const getMediaUrl = (uuid: string): string => {
+export const getMediaUrl = (uuid: string, revision: string): string => {
   return `${API_BASE_URL}/get_file/?uuid=${uuid}&ext=bin`;
 };
 
 export const getMediaMetadata = async (
   uuid: string
 ): Promise<{ contentType: string; filename: string }> => {
-  const response = await fetch(getMediaUrl(uuid), { method: "HEAD" });
+  const response = await fetch(getMediaUrl(uuid, ""), { method: "HEAD" });
   if (!response.ok) {
     throw new Error("Failed to load video");
   }

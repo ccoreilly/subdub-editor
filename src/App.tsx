@@ -137,6 +137,7 @@ function App() {
   const [editingTrack, setEditingTrack] = useState<Track | null>(null);
   const [advancedEditMode, setAdvancedEditMode] = useState(false);
   const [uuidParam, setUuidParam] = useState<string | null>(null);
+  const [revisionParam, setRevisionParam] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [serviceParam, setServiceParam] = useState<string>('dubbing');
@@ -163,6 +164,7 @@ function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const uuidParam = params.get('uuid');
+    const revisionParam = params.get('revision');
     const serviceParam = params.get('service') as 'dubbing' | 'transcription' | null;
     if (serviceParam) {
       setAppMode(serviceParam);
@@ -172,9 +174,13 @@ function App() {
 
     console.log("Initial useEffect - UUID param:", uuidParam, "Service param:", serviceParam, "App mode:", appMode);
 
+    if (revisionParam) {
+        setRevisionParam(revisionParam);
+    }
+
     if (uuidParam) {
       setUuidParam(uuidParam);
-      handleFileOrUUIDSelect(null, uuidParam);
+      handleFileOrUUIDSelect(null, uuidParam, revisionParam);
     } else {
       setLoadError('errorLoadingUUID');
     }
@@ -241,7 +247,7 @@ function App() {
     i18n.changeLanguage(event.target.value);
   };
 
-  const handleFileOrUUIDSelect = useCallback(async (file: File | null, newUuid: string | null) => {
+  const handleFileOrUUIDSelect = useCallback(async (file: File | null, newUuid: string | null, revision: string | null) => {
     console.log("handleFileOrUUIDSelect called with UUID:", newUuid);
     
     // Revoke existing object URL if there is one
@@ -264,7 +270,7 @@ function App() {
           await DubbingAPIService.uuidExists(newUuid);
           
           // Set initial video URL
-          setMediaUrl(DubbingAPIService.getMediaUrl(newUuid));
+          setMediaUrl(DubbingAPIService.getMediaUrl(newUuid,  revision ?? ''));
           setMediaType('video/mp4');
         } else if (serviceParam === "transcription") {
           const [videoDataResponse, tracksDataResponse] = await Promise.all([
@@ -272,7 +278,7 @@ function App() {
             TranscriptionAPIService.loadTracksFromUUID(newUuid)
           ]);
 
-          setMediaUrl(TranscriptionAPIService.getMediaUrl(newUuid));
+          setMediaUrl(TranscriptionAPIService.getMediaUrl(newUuid, revision ?? ''));
           setMediaType(videoDataResponse.contentType);
           setMediaFileName(videoDataResponse.filename);
           setTracks(TranscriptionAPIService.parseTracksFromJSON(tracksDataResponse));
@@ -389,7 +395,7 @@ function App() {
 
   const handleSubmit = () => {
     if (selectedFile) {
-      handleFileOrUUIDSelect(selectedFile, null);
+      handleFileOrUUIDSelect(selectedFile, null, null);
     }
   };
 
@@ -546,8 +552,9 @@ function App() {
   const handleSimpleDownload = () => {
     const params = new URLSearchParams(window.location.search);
     const uuid = params.get('uuid');
+    const revision = params.get('revision') ?? '';
     if (uuid) {
-      const url = DubbingAPIService.getMediaUrl(uuid);
+      const url = DubbingAPIService.getMediaUrl(uuid, revision);
       const a = document.createElement('a');
       a.href = url;
       a.download = `dubbed_video.mp4`;
